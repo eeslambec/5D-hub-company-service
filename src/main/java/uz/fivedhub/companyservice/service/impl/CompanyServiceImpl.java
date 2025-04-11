@@ -45,7 +45,9 @@ public class CompanyServiceImpl implements CompanyService {
         List<User> allUsers = userProxy.getAll().getBody();
         List<User> usersById()
         for (User user : users) {
-            if (company.getUserIds().contains(user.getId())) {}
+            if (company.getUserIds().contains(user.getId())) {
+
+            }
         }
         return
     }
