@@ -14,7 +14,7 @@ public class User {
     private String firstName;
     private String lastName;
     private String phoneNumber;
-    @ManyToOne
-    @JoinColumn(name = "company_id")
+    private Long companyId;
+    @Transient
     private Company company;
 }

@@ -13,6 +13,7 @@ import uz.fivedhub.companyservice.repository.CompanyRepository;
 import uz.fivedhub.companyservice.service.CompanyService;
 import uz.fivedhub.companyservice.util.Validation;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -35,26 +36,46 @@ public class CompanyServiceImpl implements CompanyService {
 
     @Override
     public Company getByName(String name) {
-        return companyRepository.findByName(name)
+        Company company = companyRepository.findByName(name)
                 .orElseThrow(() -> new NotFoundException("Company"));
+        List<User> byCompanyId = userProxy.getByCompanyId(company.getId()).getBody();
+        company.setUsers(byCompanyId);
+        return company;
     }
 
     @Override
     public Company getById(Long id) {
-        Company company = companyRepository.findById(id).orElseThrow(() -> new NotFoundException("Company"));
-        List<User> allUsers = userProxy.getAll().getBody();
-        List<User> usersById()
-        for (User user : users) {
-            if (company.getUserIds().contains(user.getId())) {
-
-            }
-        }
-        return
+        Company company = companyRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Company"));
+        List<User> users = userProxy.getByCompanyId(id).getBody();
+        if (users.isEmpty()) throw new NotFoundException("Users by company id");
+        company.setUsers(users);
+        return company;
     }
 
     @Override
     public List<Company> getAll() {
-        return companyRepository.findAll();
+        List<Company> all = companyRepository.findAll();
+        if (all.isEmpty()) {
+            throw new NotFoundException("Companies");
+        }
+
+        for (Company company : all) {
+            List<Long> userIds = company.getUserIds();
+            if (userIds != null && !userIds.isEmpty()) {
+                CustomResponseEntity<List<User>> response = userProxy.getAllByIds(userIds);
+                if (response != null && response.getBody() != null) {
+                    List<User> users = response.getBody();
+                    company.setUsers(users);
+                } else {
+                    company.setUsers(Collections.emptyList());
+                }
+            } else {
+                company.setUsers(Collections.emptyList());
+            }
+        }
+
+        return all;
     }
 
 
@@ -78,7 +99,15 @@ public class CompanyServiceImpl implements CompanyService {
 
     @Override
     public void deleteById(Long id) {
-        companyRepository.findById(id).orElseThrow(() -> new NotFoundException("Company"));
+        Company company = companyRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Company"));
+        List<User> body = userProxy.getAllByIds(company.getUserIds()).getBody();
+        if (body.isEmpty()) throw new NotFoundException("Users by company id");
+        for (User user : body) {
+            user.setCompanyId(null);
+            user.setCompany(null);
+            userProxy.update(user);
+        }
         companyRepository.deleteById(id);
     }
 }
